@@ -58,7 +58,7 @@ struct ContentView_Previews: PreviewProvider {
 struct TripView: View {
     
     @State var result: Result<MFMailComposeResult, Error>? = nil
-    @State var isShowingMailView = false
+    @State var showingMail = false
     
     
     @State var name: String = ""
@@ -86,11 +86,11 @@ struct TripView: View {
                 Button(action: {
                     response = FormResponse(requestType: "Trip", name: self.name, reason: self.reason, date: self.date, returnDate: self.returnDate, advisorEmail: self.advisorEmail, teacher1: self.t1, teacher2: self.t2, teacher3: self.t3, transportation: "", host: "", location: self.location)
                     emails = [self.advisorEmail, self.t1, self.t2, self.t3]
-                    self.isShowingMailView.toggle()
+                    self.showingMail.toggle()
                 }) {
                     Text("Submit")
                 }
-                .sheet(isPresented: $isShowingMailView) {
+                .sheet(isPresented: $showingMail) {
                     MailView(result: self.$result)
                 }
                 
@@ -213,12 +213,12 @@ struct NightView: View {
     }
 }
 
-//modified from https://stackoverflow.com/questions/56784722/swiftui-send-email
+//referenced from https://stackoverflow.com/questions/56784722/swiftui-send-email and swift docs
 struct MailView: UIViewControllerRepresentable {
     
     @Environment(\.presentationMode) var presentation
     @Binding var result: Result<MFMailComposeResult, Error>?
-    
+    //create coordinator for mail view
     class Coordinator: NSObject, MFMailComposeViewControllerDelegate {
         
         @Binding var presentation: PresentationMode
@@ -233,13 +233,16 @@ struct MailView: UIViewControllerRepresentable {
         func mailComposeController(_ controller: MFMailComposeViewController,
                                    didFinishWith result: MFMailComposeResult,
                                    error: Error?) {
+           
             defer {
                 $presentation.wrappedValue.dismiss()
             }
+            //if there is error, report
             guard error == nil else {
                 self.result = .failure(error!)
                 return
             }
+            //otherwise, return result
             self.result = .success(result)
         }
     }
@@ -250,40 +253,40 @@ struct MailView: UIViewControllerRepresentable {
     }
     
     func makeUIViewController(context: UIViewControllerRepresentableContext<MailView>) -> MFMailComposeViewController {
-        let vc = MFMailComposeViewController()
+        let mail = MFMailComposeViewController()
         
-        
+        //autopopulate emails with request info for each request type
         if response.requestType == "Trip" {
             
-        vc.setSubject("Trip Request")
-        vc.setToRecipients(emails)
-        vc.setCcRecipients(["I don't want to email Beth Wilson, so this is a placeholder"])
-        vc.setMessageBody("\(response.name) has submitted a trip request awaiting your approval.\nReason for Trip: \(response.reason)\nDate of Departure: \(response.date)\nReturn Date: \(response.returnDate)", isHTML: false)
+            mail.setSubject("Trip Request")
+            mail.setToRecipients(emails)
+            mail.setCcRecipients(["I don't want to email Beth Wilson, so this is a placeholder"])
+            mail.setMessageBody("\(response.name) has submitted a trip request awaiting your approval.\nReason for Trip: \(response.reason)\nDate of Departure: \(response.date)\nReturn Date: \(response.returnDate)", isHTML: false)
         }
-        
-         else if response.requestType == "Long" {
-                   
-               vc.setSubject("Long Weekend Request")
-               vc.setToRecipients(emails)
-               vc.setCcRecipients(["I don't want to email Beth Wilson, so this is a placeholder"])
-            vc.setMessageBody("\(response.name) has submitted a long weekend request awaiting your approval.\nDestionation: \(response.location)\nHost: \(response.host)\nTransportation: \(response.transportation)\nDate of Departure: \(response.date)\nReturn Date: \(response.returnDate)", isHTML: false)
-               }
+            
+        else if response.requestType == "Long" {
+            
+            mail.setSubject("Long Weekend Request")
+            mail.setToRecipients(emails)
+            mail.setCcRecipients(["I don't want to email Beth Wilson, so this is a placeholder"])
+            mail.setMessageBody("\(response.name) has submitted a long weekend request awaiting your approval.\nDestionation: \(response.location)\nHost: \(response.host)\nTransportation: \(response.transportation)\nDate of Departure: \(response.date)\nReturn Date: \(response.returnDate)", isHTML: false)
+        }
         else if response.requestType == "Short" {
-               
-           vc.setSubject("Short Weekend Request")
-           vc.setToRecipients(emails)
-           vc.setCcRecipients(["I don't want to email Beth Wilson, so this is a placeholder"])
-        vc.setMessageBody("\(response.name) has submitted a short weekend request awaiting your approval.\nDestionation: \(response.location)\nHost: \(response.host)\nTransportation: \(response.transportation)\nDate of Departure: \(response.date)\nReturn Date: \(response.returnDate)", isHTML: false)
-           }
+            
+            mail.setSubject("Short Weekend Request")
+            mail.setToRecipients(emails)
+            mail.setCcRecipients(["I don't want to email Beth Wilson, so this is a placeholder"])
+            mail.setMessageBody("\(response.name) has submitted a short weekend request awaiting your approval.\nDestionation: \(response.location)\nHost: \(response.host)\nTransportation: \(response.transportation)\nDate of Departure: \(response.date)\nReturn Date: \(response.returnDate)", isHTML: false)
+        }
         else if response.requestType == "Night" {
-               
-           vc.setSubject("Late Night Request")
-           vc.setToRecipients(emails)
-           vc.setCcRecipients(["Placeholder for faculty member"])
-        vc.setMessageBody("\(response.name) has submitted a late night request awaiting your approval.\nDestionation: \(response.location)\nTransportation: \(response.transportation)\nDate: \(response.date)\n", isHTML: false)
-           }
-        vc.mailComposeDelegate = context.coordinator
-        return vc
+            
+            mail.setSubject("Late Night Request")
+            mail.setToRecipients(emails)
+            mail.setCcRecipients(["Placeholder for faculty member"])
+            mail.setMessageBody("\(response.name) has submitted a late night request awaiting your approval.\nDestionation: \(response.location)\nTransportation: \(response.transportation)\nDate: \(response.date)\n", isHTML: false)
+        }
+        mail.mailComposeDelegate = context.coordinator
+        return mail
     }
     
     func updateUIViewController(_ uiViewController: MFMailComposeViewController,
